@@ -1,0 +1,74 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:2.14.2-pg15
+    container_name: eeie-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-eeie}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eeie_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-eeie}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-eeie} -d ${POSTGRES_DB:-eeie}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - eeie
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: eeie-api
+    restart: unless-stopped
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    environment:
+      EEIE_DATABASE_URL: ${EEIE_DATABASE_URL:-postgresql+psycopg://eeie:eeie_dev_password@timescaledb:5432/eeie}
+      EEIE_API_HOST: 0.0.0.0
+      EEIE_API_PORT: 8000
+      EEIE_API_LOG_LEVEL: ${EEIE_API_LOG_LEVEL:-info}
+      EEIE_DATA_DIR: /app/data
+      EEIE_CHECKPOINT_DIR: /app/checkpoints
+      EEIE_OPTIMIZER: ${EEIE_OPTIMIZER:-milp}
+    ports:
+      - "${EEIE_API_PORT:-8000}:8000"
+    volumes:
+      - ./data:/app/data
+      - ./checkpoints:/app/checkpoints
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz', timeout=2).status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - eeie
+
+  ui:
+    build:
+      context: .
+      dockerfile: docker/ui.Dockerfile
+    container_name: eeie-ui
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      EEIE_API_BASE_URL: ${EEIE_API_BASE_URL:-http://api:8000}
+    ports:
+      - "${EEIE_UI_PORT:-8501}:8501"
+    networks:
+      - eeie
+
+volumes:
+  timescaledb_data:
+
+networks:
+  eeie:
+    driver: bridge

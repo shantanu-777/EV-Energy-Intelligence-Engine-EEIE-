@@ -1,0 +1,130 @@
+[project]
+name = "eeie"
+version = "0.1.0"
+description = "EV Energy Intelligence Engine: predictive and explainable energy/charging optimization for electric vehicles."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "EEIE Contributors" }]
+
+dependencies = [
+    # core
+    "numpy>=1.26,<2.0",
+    "pandas>=2.1",
+    "pyarrow>=15.0",
+    "python-dotenv>=1.0",
+    "loguru>=0.7",
+    "typer>=0.12",
+    # validation + config
+    "pydantic>=2.6",
+    "pydantic-settings>=2.2",
+    # database
+    "sqlalchemy>=2.0",
+    "psycopg[binary]>=3.1",
+    "alembic>=1.13",
+    # ml: tree models + classical
+    "scikit-learn>=1.4,<1.7",
+    "xgboost>=2.0,<3.0",
+    # ml: deep learning
+    "torch>=2.2,<2.5",
+    "pytorch-lightning>=2.2,<2.5",
+    "pytorch-forecasting>=1.0,<1.3",
+    # ml: reinforcement learning
+    "gymnasium>=0.29",
+    "stable-baselines3>=2.3",
+    # optimization
+    "ortools>=9.9",
+    # explainability
+    "shap>=0.45",
+    "matplotlib>=3.8",
+    # api
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "httpx>=0.27",
+    # ui
+    "streamlit>=1.33",
+    "plotly>=5.20",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "types-requests>=2.31",
+    "pre-commit>=3.7",
+]
+
+[project.scripts]
+eeie-simulate = "eeie.simulation.run:app"
+eeie-train = "scripts.train_all:app"
+eeie-evaluate = "scripts.evaluate:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["eeie", "scripts"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["data", "checkpoints", ".venv"]
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",     # pycodestyle / pyflakes
+    "I",                # isort
+    "B",                # flake8-bugbear
+    "UP",               # pyupgrade
+    "N",                # pep8-naming
+    "SIM",              # flake8-simplify
+    "RUF",              # ruff-specific
+]
+ignore = [
+    "E501",   # line length handled by formatter
+    "B008",   # FastAPI uses function-call defaults intentionally
+    "N803",   # allow ML-style variable names like X, X_train
+    "N806",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+"eeie/ui_streamlit/**" = ["E402", "N999"]
+"eeie/ui_streamlit/pages/**" = ["E402", "N999"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+ignore_missing_imports = true
+disallow_untyped_defs = false
+exclude = ["data", "checkpoints", ".venv", "build", "dist"]
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "eeie.ui_streamlit.*"]
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra -q --strict-markers"
+markers = [
+    "slow: marks tests as slow (deselect with -m 'not slow')",
+    "integration: marks tests as integration (require running services)",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["eeie"]
+omit = ["eeie/ui_streamlit/*"]

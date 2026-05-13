@@ -1,0 +1,187 @@
+EEIE Phase 1 Skeleton
+
+A runnable end-to-end platform: simulator produces realistic synthetic data into TimescaleDB, all engines train on it, FastAPI serves predictions, Streamlit visualizes them. Depth comes later; breadth and structural integrity come now.
+
+<img width="2158" height="1349" alt="Screenshot 2026-05-13 at 21 20 25" src="https://github.com/user-attachments/assets/9a4f7fdf-b0fa-40f0-8c89-4ea805f43430" />
+
+<img width="1500" height="1271" alt="Screenshot 2026-05-13 at 21 22 09" src="https://github.com/user-attachments/assets/48163f9a-212d-4a44-92bd-ef252523796f" />
+<img width="1485" height="1321" alt="Screenshot 2026-05-13 at 21 23 22" src="https://github.com/user-attachments/assets/22e9f122-7a97-4d56-ac91-53a64142a647" />
+
+
+layout
+
+```
+EV-Energy-Intelligence-Engine-EEIE/
+├── pyproject.toml                  # uv-managed, Python 3.11
+├── uv.lock
+├── docker-compose.yml             # timescaledb, api, ui
+├── .env.example
+├── .pre-commit-config.yaml        # ruff, mypy, pytest-on-push
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # lint + type + tests
+│
+├── docker/
+│   ├── api.Dockerfile
+│   └── ui.Dockerfile
+│
+├── eeie/                          # Main Python package
+│   ├── config/                    # pydantic-settings, tariff/vehicle profiles
+│   ├── db/                        # SQLAlchemy models, Alembic, hypertable bootstrap
+│   ├── ingestion/                 # source → DB adapters + pydantic schemas
+│   ├── features/                  # feature engineering (versioned)
+│   ├── simulation/                # synthetic data generator (CLI)
+│   │
+│   ├── models/
+│   │   ├── range/
+│   │   │   ├── xgb.py
+│   │   │   ├── lstm.py
+│   │   │   └── predict.py
+│   │   │
+│   │   ├── demand/
+│   │   │   ├── xgb.py
+│   │   │   ├── tft.py
+│   │   │   └── predict.py
+│   │   │
+│   │   ├── battery/
+│   │   │   ├── empirical.py
+│   │   │   ├── correction.py
+│   │   │   └── predict.py
+│   │   │
+│   │   ├── optimization/
+│   │   │   ├── milp.py
+│   │   │   ├── env.py
+│   │   │   ├── rl.py
+│   │   │   └── optimize.py
+│   │   │
+│   │   └── behavior/
+│   │       ├── cluster.py
+│   │       ├── consumption.py
+│   │       └── analyze.py
+│   │
+│   ├── explainability/
+│   │   ├── shap_engine.py
+│   │   ├── pdp.py
+│   │   └── insight.py
+│   │
+│   ├── api/                       # FastAPI app, routers, schemas, deps
+│   └── evaluation/                # metrics, ablation harness
+│
+├── ui_streamlit/                  # multi-page app, API-only
+├── tests/                         # pytest smoke coverage per module
+├── scripts/                       # CLIs: simulate, train_all, evaluate
+└── data/                          # gitignored Parquet snapshots
+```
+
+Build order (module dependencies)
+
+<img width="1436" height="1008" alt="Screenshot 2026-05-13 at 15 02 39" src="https://github.com/user-attachments/assets/24162fde-842f-4dbd-9509-1b10bef13847" />
+
+Key technical decisions
+
+- Python 3.11, dependency manager uv (with pyproject.toml + lockfile); also generate a requirements.txt export for non-uv users.
+- Postgres 15 + TimescaleDB in Docker, schema managed via SQLAlchemy 2.x + Alembic, hypertables for telemetry, weather, tariffs, charging_events.
+- Simulator is physics-lite but realistic: per-vehicle battery capacity, kWh/km consumption modulated by temperature (cold-weather range loss), driver profile (efficient/moderate/aggressive), commuter/weekend driving patterns, ToU tariff schedule (EU-style peak/off-peak/shoulder), seasonal weather curves. Outputs hourly resolution.
+- Range: XGBoost baseline + PyTorch LSTM sequence model. Both train on simulator output.
+- Demand: XGBoost baseline + Temporal Fusion Transformer via pytorch-forecasting.
+- Battery: empirical calendar+cycle aging model + XGBoost residual correction layer (hybrid as the doc specifies).
+- Optimization: OR-Tools CP-SAT/MILP solver as primary; stable-baselines3 PPO agent on a custom gymnasium.Env charging environment as advanced track. Both selectable via config.
+- Behavior: K-Means clustering + XGBoost energy-per-100km regression.
+- Explainability: SHAP TreeExplainer for tree models, DeepExplainer/KernelExplainer for nets, partial dependence utility, and a unified Insight pydantic model returned alongside every prediction (top features + financial impact + battery impact + confidence).
+- API: FastAPI with five endpoints from the architecture doc (/predict_range, /optimize_charging, /battery_health, /cost_analysis, /behavior_analysis), each returning prediction + insight + confidence; OpenAPI docs auto-generated.
+- UI: Streamlit multi-page (one page per engine), strictly an HTTP client of the API.
+- Evaluation: naive vs rule-based vs EEIE ablation harness over the synthetic dataset, computing cost reduction %, peak-hour avoidance %, degradation reduction %, RMSE/MAE/calibration error, inference latency.
+
+
+The data layer is **PostgreSQL + TimescaleDB**, run in Docker. Hypertables
+store telemetry, weather, tariffs, and charging events at hourly resolution.
+
+
+
+
+## Quickstart
+
+### 1. Bring up the stack
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+This starts three services:
+
+- `timescaledb` (Postgres 15 + TimescaleDB)
+- `api` (FastAPI on `http://localhost:8000`, docs at `/docs`)
+- `ui` (Streamlit on `http://localhost:8501`)
+
+### 2. Bootstrap the database and populate it
+
+```bash
+docker compose exec api alembic upgrade head
+docker compose exec api python -m eeie.simulation.run --vehicles 100 --months 12
+```
+
+The simulator generates 100 vehicles x 12 months of hourly telemetry,
+tariff schedules, weather, and charging events, writing both to TimescaleDB
+hypertables and to Parquet snapshots in `./data/`.
+
+### 3. Train the models
+
+```bash
+docker compose exec api python -m scripts.train_all
+```
+
+Trains every engine (XGBoost + LSTM + TFT + battery hybrid + MILP/PPO
+configs + K-Means/XGBoost). Checkpoints are persisted to `./checkpoints/`.
+
+### 4. Use the platform
+
+- API explorer: <http://localhost:8000/docs>
+- Streamlit UI: <http://localhost:8501>
+- Run the ablation: `docker compose exec api python -m scripts.evaluate`
+
+## Local development (no Docker)
+
+```bash
+# Install uv (https://docs.astral.sh/uv/)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies
+uv sync --extra dev
+
+# Run linters and tests
+uv run ruff check .
+uv run mypy eeie
+uv run pytest
+
+# Start API and UI locally (point them at a local Postgres)
+uv run uvicorn eeie.api.main:app --reload
+uv run streamlit run eeie/ui_streamlit/Home.py
+```
+
+You will still need a TimescaleDB instance reachable via `EEIE_DATABASE_URL`.
+The Compose file's `timescaledb` service can be used standalone:
+
+```bash
+docker compose up timescaledb -d
+EEIE_DATABASE_URL=postgresql+psycopg://eeie:eeie_dev_password@localhost:5432/eeie uv run ...
+```
+
+## Engineering standards
+
+- Python 3.11, dependencies managed with [uv](https://docs.astral.sh/uv/).
+- Linting: `ruff`. Types: `mypy`. Tests: `pytest`.
+- Pre-commit hooks enforce formatting, linting, and type checks.
+- CI (GitHub Actions) runs lint + type + tests on every push.
+- All ML inference paths emit a structured `Insight` (top features +
+  financial impact + battery impact + confidence) alongside the prediction.
+
+## Roadmap beyond Phase 1
+
+- RL convergence and reward shaping for `optimization.rl`
+- TFT hyperparameter sweeps and quantile forecasting
+- Real-vehicle telemetry adapters (replace simulator)
+- Carbon-intensity-aware charging
+- Vehicle-to-Grid simulation
+- Fleet-level scheduling
+- Solar self-consumption integration
