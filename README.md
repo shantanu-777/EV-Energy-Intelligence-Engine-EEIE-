@@ -142,7 +142,7 @@ configs + K-Means/XGBoost). Checkpoints are persisted to `./checkpoints/`.
 - Streamlit UI: <http://localhost:8501>
 - Run the ablation: `docker compose exec api python -m scripts.evaluate`
 
-## Real-world dataset ingestion
+## dataset ingestion
 
 The ingestion CLI tracks several public datasets that ultimately feed the
 same schema as the built-in simulator. Downloads are manual: unzip into
