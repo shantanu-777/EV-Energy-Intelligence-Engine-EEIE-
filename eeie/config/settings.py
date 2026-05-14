@@ -51,8 +51,16 @@ class Settings(BaseSettings):
     optimizer: str = Field(default="milp", validation_alias="EEIE_OPTIMIZER")
 
     def ensure_dirs(self) -> None:
-        """Create writable runtime directories if they don't exist."""
+        """Create writable runtime directories if they don't exist.
+
+        Includes the three sub-roots used by the hybrid pipeline:
+        ``raw/`` (manual Kaggle drops), ``curated/`` (post-adapter parquet),
+        and ``hybrid/`` (final merged synthetic+real snapshots).
+        """
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        (self.data_dir / "raw").mkdir(parents=True, exist_ok=True)
+        (self.data_dir / "curated").mkdir(parents=True, exist_ok=True)
+        (self.data_dir / "hybrid").mkdir(parents=True, exist_ok=True)
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
 
