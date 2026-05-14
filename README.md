@@ -140,6 +140,32 @@ configs + K-Means/XGBoost). Checkpoints are persisted to `./checkpoints/`.
 - Streamlit UI: <http://localhost:8501>
 - Run the ablation: `docker compose exec api python -m scripts.evaluate`
 
+## Real-world dataset ingestion
+
+Phase 1 introduces a registry of public Kaggle datasets that will be folded
+into the simulator as a unified synthetic-real hybrid pipeline. Downloads
+are **manual** -- the project never reaches out to Kaggle from code. After
+downloading, drop the extracted CSVs under `data/raw/<slug>/`:
+
+| Slug | Source | Primary file | Target canonical table(s) |
+|---|---|---|---|
+| `charging_patterns` | [Electric Vehicle Charging Patterns](https://www.kaggle.com/datasets/valakhorasani/electric-vehicle-charging-patterns) | `ev_charging_patterns.csv` | `vehicles`, `charging_events` |
+| `battery_charging` | [EV Battery Charging Dataset](https://www.kaggle.com/datasets/programmer3/ev-battery-charging-dataset) | `nev_battery_charging.csv` | `telemetry` |
+| `station_availability` | [EV Charging Station Availability Tracking](https://www.kaggle.com/datasets/likithagedipudi/ev-charging-station-availability-tracking) | `ev_charging_station_data.csv` | `station_state` |
+| `germany_charging` | [Electric Vehicle Charging in Germany](https://www.kaggle.com/datasets/mexwell/electric-vehicle-charging-in-germany) | `charging_data.csv` | `station_state` (static catalog) |
+
+Verify the on-disk layout before running adapters:
+
+```bash
+python -m eeie.ingestion.cli verify --all
+# or per dataset:
+python -m eeie.ingestion.cli verify --slug charging_patterns
+```
+
+The verifier checks that each slug folder exists, the expected primary CSV
+is present, and its header contains the canonical columns required by the
+Phase 2 / 3 adapters. Files under `data/` are gitignored.
+
 ## Local development (no Docker)
 
 ```bash
