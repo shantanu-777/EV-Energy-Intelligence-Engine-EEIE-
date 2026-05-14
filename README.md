@@ -144,10 +144,9 @@ configs + K-Means/XGBoost). Checkpoints are persisted to `./checkpoints/`.
 
 ## Real-world dataset ingestion
 
-Phase 1 introduces a registry of public Kaggle datasets that will be folded
-into the simulator as a unified synthetic-real hybrid pipeline. Downloads
-are **manual** -- the project never reaches out to Kaggle from code. After
-downloading, drop the extracted CSVs under `data/raw/<slug>/`:
+The ingestion CLI tracks several public datasets that ultimately feed the
+same schema as the built-in simulator. Downloads are manual: unzip into
+`data/raw/<slug>/`:
 
 | Slug | Source | Primary file | Target canonical table(s) |
 |---|---|---|---|
@@ -164,9 +163,21 @@ python -m eeie.ingestion.cli verify --all
 python -m eeie.ingestion.cli verify --slug charging_patterns
 ```
 
-The verifier checks that each slug folder exists, the expected primary CSV
-is present, and its header contains the canonical columns required by the
-Phase 2 / 3 adapters. Files under `data/` are gitignored.
+The verifier checks each slug folder, the primary CSV filename, and a
+minimal header signature. Anything under `data/` stays untracked in git.
+
+Once verified, run the adapters to materialise curated parquet snapshots
+under `data/curated/<slug>/`. Each adapter projects its source into the
+canonical schema (`vehicles`, `telemetry`, `charging_events`, ...) so the
+curated frames are drop-in compatible with the simulator's tables.
+
+```bash
+python -m eeie.ingestion.cli run --all
+python -m eeie.ingestion.cli run --slug charging_patterns
+```
+
+`USD` cost columns are converted to `EUR` at the rate configured by
+`EEIE_USD_TO_EUR` (default `0.92`).
 
 ## Local development (no Docker)
 

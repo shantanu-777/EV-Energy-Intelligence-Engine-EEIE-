@@ -2,9 +2,8 @@
 
 Datasets are downloaded manually by the project owner and extracted under
 ``<settings.data_dir>/raw/<slug>/``. This module is the single source of
-truth for resolving those paths and confirming the on-disk layout matches
-the registry. Phase 2/3 adapters call :func:`find_csv` to obtain a
-``Path`` they can pass to ``pandas.read_csv``.
+truth for resolving those paths and verifying the registry. Adapters
+use :func:`find_csv` to obtain a ``Path`` for ``pandas.read_csv``.
 
 Nothing here downloads, mutates, or writes files: it is read-only.
 """

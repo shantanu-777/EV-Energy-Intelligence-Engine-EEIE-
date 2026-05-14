@@ -1,11 +1,49 @@
-"""Per-dataset adapters that map raw CSVs to canonical EEIE schemas.
-
-Concrete adapters land in Phase 2 (``charging_patterns``, ``battery_charging``)
-and Phase 3 (``station_availability``, ``germany_charging``). This package
-is an explicit placeholder so imports of ``eeie.ingestion.adapters``
-resolve from Phase 1 onwards and tests can introspect it.
-"""
+"""Dataset-specific CSV → canonical table projections."""
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from collections.abc import Callable
+from pathlib import Path
+
+from eeie.ingestion.adapters import battery_charging, charging_patterns
+from eeie.ingestion.adapters._common import (
+    CuratedFrame,
+    curated_dir,
+    validate_curated,
+    write_curated,
+)
+
+AdapterFn = Callable[[Path], CuratedFrame]
+
+ADAPTERS: dict[str, AdapterFn] = {
+    charging_patterns.SLUG: charging_patterns.to_canonical,
+    battery_charging.SLUG: battery_charging.to_canonical,
+}
+
+
+def get_adapter(slug: str) -> AdapterFn:
+    """Return the adapter callable for `slug`, raising if none is registered."""
+    try:
+        return ADAPTERS[slug]
+    except KeyError as exc:
+        known = ", ".join(sorted(ADAPTERS)) or "(none)"
+        raise ValueError(
+            f"No adapter registered for slug {slug!r}. Available: {known}."
+        ) from exc
+
+
+def available_slugs() -> list[str]:
+    """Return the slugs that currently have an adapter implementation."""
+    return sorted(ADAPTERS)
+
+
+__all__ = [
+    "ADAPTERS",
+    "AdapterFn",
+    "CuratedFrame",
+    "available_slugs",
+    "curated_dir",
+    "get_adapter",
+    "validate_curated",
+    "write_curated",
+]
