@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # --- Optimization ---
     optimizer: str = Field(default="milp", validation_alias="EEIE_OPTIMIZER")
 
+    # --- Currency ---
+    # Cost figures in some public datasets are denominated in USD; the rest of
+    # the platform reports EUR, so adapters convert at this rate.
+    usd_to_eur: float = Field(default=0.92, validation_alias="EEIE_USD_TO_EUR", gt=0)
+
     def ensure_dirs(self) -> None:
         """Create writable runtime directories if they don't exist.
 

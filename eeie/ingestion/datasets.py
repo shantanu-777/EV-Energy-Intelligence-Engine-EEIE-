@@ -1,14 +1,4 @@
-"""Real-world dataset registry.
-
-Each dataset we ingest is described once here so adapters, tests, and the
-``eeie-ingest`` CLI agree on slug, expected filenames, and target
-canonical EEIE tables.
-
-Downloads are manual per project policy: users place extracted files
-under ``data/raw/<slug>/``. Phase 2 (and beyond) adapters read those
-files and project them into the canonical schema defined in
-``eeie.db.models`` / ``eeie.ingestion.schemas``.
-"""
+"""Registry of externally sourced CSV datasets (manual download paths, headers)."""
 
 from __future__ import annotations
 
@@ -41,8 +31,7 @@ class DatasetSpec(BaseModel):
     target_canonical: tuple[str, ...] = Field(
         default=(),
         description=(
-            "Names of canonical EEIE tables this dataset will be mapped into during "
-            "Phase 2/3 adapter implementation."
+            "Canonical EEIE tables this slug maps onto once an adapter exists."
         ),
     )
     description: str = ""

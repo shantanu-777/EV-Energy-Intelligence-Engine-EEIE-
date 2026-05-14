@@ -1,6 +1,15 @@
-"""Ingestion layer: source-to-DB adapters, pydantic schemas, and the
-real-dataset registry / on-disk resolver used by Phase 2+ adapters."""
+"""Ingestion layer: source-to-DB adapters, pydantic schemas, real-dataset
+registry / on-disk resolver, and per-source adapters."""
 
+from eeie.ingestion.adapters import (
+    ADAPTERS,
+    CuratedFrame,
+    available_slugs,
+    curated_dir,
+    get_adapter,
+    validate_curated,
+    write_curated,
+)
 from eeie.ingestion.datasets import (
     REGISTRY,
     DatasetSpec,
@@ -31,15 +40,20 @@ from eeie.ingestion.schemas import (
 )
 
 __all__ = [
+    "ADAPTERS",
     "REGISTRY",
     "ChargingEventRecord",
+    "CuratedFrame",
     "DatasetSpec",
     "RawDatasetStatus",
     "TariffRecord",
     "TelemetryRecord",
     "VehicleRecord",
     "WeatherRecord",
+    "available_slugs",
+    "curated_dir",
     "find_csv",
+    "get_adapter",
     "get_dataset",
     "list_datasets",
     "load_charging_events",
@@ -49,6 +63,8 @@ __all__ = [
     "load_weather",
     "raw_dir",
     "raw_root",
+    "validate_curated",
     "verify",
     "verify_all",
+    "write_curated",
 ]
