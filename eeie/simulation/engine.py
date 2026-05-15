@@ -335,9 +335,13 @@ def simulate_fleet(config: SimulationConfig) -> SimulationResult:
                 "avg_power_kw",
                 "is_dc_fast",
                 "cost_eur",
+                "data_source",
             ]
         )
     )
+
+    telemetry = telemetry.assign(data_source="synthetic")
+    charging_events = charging_events.assign(data_source="synthetic")
 
     vehicles_df = pd.DataFrame(
         [

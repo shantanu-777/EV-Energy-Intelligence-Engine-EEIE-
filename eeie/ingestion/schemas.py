@@ -7,8 +7,11 @@ validate its payloads against `TelemetryRecord` before persisting).
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+DataSource = Literal["synthetic", "real", "hybrid"]
 
 
 class _Base(BaseModel):
@@ -45,6 +48,7 @@ class TelemetryRecord(_Base):
     is_charging: bool
     is_driving: bool
     soh: float = Field(ge=0, le=1)
+    data_source: DataSource
 
 
 class WeatherRecord(_Base):
@@ -74,6 +78,7 @@ class ChargingEventRecord(_Base):
     avg_power_kw: float = Field(ge=0)
     is_dc_fast: bool
     cost_eur: float = Field(ge=0)
+    data_source: DataSource
 
 
 class StationStateRecord(_Base):

@@ -182,7 +182,11 @@ python -m eeie.ingestion.cli run --slug charging_patterns
 ```
 
 `USD` cost columns are converted to `EUR` at the rate configured by
-`EEIE_USD_TO_EUR` (default `0.92`).
+`EEIE_USD_TO_EUR` (default `0.92`). `telemetry` and `charging_events` carry
+`data_source` (`synthetic` or `real` in current pipelines; the enum also
+allows `hybrid`). Simulated fleet output tags `synthetic`; Kaggle-backed
+adapters tag `real`. Merge tables with `eeie.ingestion.unify_pipeline`
+before bulk loading once Alembic has applied revision ``0003`` or newer.
 
 ## Local development (no Docker)
 

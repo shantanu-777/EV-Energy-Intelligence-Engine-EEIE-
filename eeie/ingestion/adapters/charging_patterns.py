@@ -61,6 +61,7 @@ def _build_charging_events(raw: pd.DataFrame) -> pd.DataFrame:
             "avg_power_kw": raw["Charging Rate (kW)"].astype(float).clip(lower=0.0),
             "is_dc_fast": charger.str.casefold().eq("dc fast charger").astype(bool),
             "cost_eur": usd_to_eur(raw["Charging Cost (USD)"].astype(float)).clip(lower=0.0),
+            "data_source": "real",
         }
     )
     required = [

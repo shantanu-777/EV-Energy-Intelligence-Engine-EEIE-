@@ -58,6 +58,7 @@ def _build_telemetry(raw: pd.DataFrame) -> pd.DataFrame:
             "is_charging": charging,
             "is_driving": pd.Series(False, index=charging.index),
             "soh": soh,
+            "data_source": "real",
         }
     )
 

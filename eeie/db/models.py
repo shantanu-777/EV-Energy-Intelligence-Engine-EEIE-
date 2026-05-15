@@ -20,6 +20,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -69,6 +70,9 @@ class Telemetry(Base):
     is_charging: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_driving: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     soh: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    data_source: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'synthetic'")
+    )
 
     vehicle: Mapped[Vehicle] = relationship(back_populates="telemetry")
 
@@ -116,6 +120,9 @@ class ChargingEvent(Base):
     avg_power_kw: Mapped[float] = mapped_column(Float, nullable=False)
     is_dc_fast: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     cost_eur: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    data_source: Mapped[str] = mapped_column(
+        String(16), nullable=False, server_default=text("'synthetic'")
+    )
 
     vehicle: Mapped[Vehicle] = relationship(back_populates="charging_events")
 

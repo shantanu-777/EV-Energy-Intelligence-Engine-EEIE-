@@ -34,18 +34,21 @@ from eeie.ingestion.raw import (
 )
 from eeie.ingestion.schemas import (
     ChargingEventRecord,
+    DataSource,
     StationStateRecord,
     TariffRecord,
     TelemetryRecord,
     VehicleRecord,
     WeatherRecord,
 )
+from eeie.ingestion.unifier import unify_pipeline
 
 __all__ = [
     "ADAPTERS",
     "REGISTRY",
     "ChargingEventRecord",
     "CuratedFrame",
+    "DataSource",
     "DatasetSpec",
     "RawDatasetStatus",
     "StationStateRecord",
@@ -67,6 +70,7 @@ __all__ = [
     "load_weather",
     "raw_dir",
     "raw_root",
+    "unify_pipeline",
     "validate_curated",
     "verify",
     "verify_all",

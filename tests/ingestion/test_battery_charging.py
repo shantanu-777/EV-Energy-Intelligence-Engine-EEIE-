@@ -57,6 +57,7 @@ def test_telemetry_values_are_in_range(sample_csv: Path) -> None:
     assert (tel["energy_consumed_kwh"] == 0.0).all()
     assert (tel["km_driven_hour"] == 0.0).all()
     assert (tel["is_driving"] == False).all()  # noqa: E712
+    assert (tel["data_source"] == "real").all()
 
 
 def test_charging_flag_tracks_action_current(sample_csv: Path) -> None:
