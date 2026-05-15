@@ -166,8 +166,15 @@ minimal header signature. Anything under `data/` stays untracked in git.
 
 Once verified, run the adapters to materialise curated parquet snapshots
 under `data/curated/<slug>/`. Each adapter projects its source into the
-canonical schema (`vehicles`, `telemetry`, `charging_events`, ...) so the
-curated frames are drop-in compatible with the simulator's tables.
+canonical schema (`vehicles`, `telemetry`, `charging_events`,
+`station_state`, ...). Pull schema changes before loading curated data:
+
+```bash
+docker compose exec api alembic upgrade head
+```
+
+German registry rows carry a fixed timestamp (`1970-01-01` UTC); the US
+availability file keeps its native hourly timestamps.
 
 ```bash
 python -m eeie.ingestion.cli run --all

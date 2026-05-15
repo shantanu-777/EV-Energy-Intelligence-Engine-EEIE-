@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from eeie.config.settings import get_settings
 from eeie.ingestion.schemas import (
     ChargingEventRecord,
+    StationStateRecord,
     TariffRecord,
     TelemetryRecord,
     VehicleRecord,
@@ -35,6 +36,7 @@ class CuratedFrame:
     charging_events: pd.DataFrame = field(default_factory=pd.DataFrame)
     weather: pd.DataFrame = field(default_factory=pd.DataFrame)
     tariffs: pd.DataFrame = field(default_factory=pd.DataFrame)
+    station_state: pd.DataFrame = field(default_factory=pd.DataFrame)
 
     def summary(self) -> dict[str, int]:
         return {
@@ -43,6 +45,7 @@ class CuratedFrame:
             "charging_events": len(self.charging_events),
             "weather": len(self.weather),
             "tariffs": len(self.tariffs),
+            "station_state": len(self.station_state),
         }
 
 
@@ -52,6 +55,7 @@ _SCHEMA_BY_TABLE: dict[str, type[BaseModel]] = {
     "charging_events": ChargingEventRecord,
     "weather": WeatherRecord,
     "tariffs": TariffRecord,
+    "station_state": StationStateRecord,
 }
 
 
@@ -94,8 +98,20 @@ def validate_records(df: pd.DataFrame, schema: type[BaseModel]) -> None:
     """Raise if any row does not satisfy ``schema``."""
     if df.empty:
         return
+
+    def _cell(v):
+        if v is None:
+            return None
+        try:
+            if pd.api.types.is_scalar(v) and pd.isna(v):
+                return None
+        except (TypeError, ValueError):
+            pass
+        return v
+
     for record in df.to_dict(orient="records"):
-        schema.model_validate(record)
+        cleaned = {k: _cell(v) for k, v in record.items()}
+        schema.model_validate(cleaned)
 
 
 def validate_curated(frame: CuratedFrame) -> None:

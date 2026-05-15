@@ -76,3 +76,4 @@ def test_other_tables_are_empty(sample_csv: Path) -> None:
     assert frame.charging_events.empty
     assert frame.weather.empty
     assert frame.tariffs.empty
+    assert frame.station_state.empty

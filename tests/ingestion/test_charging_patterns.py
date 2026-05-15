@@ -101,3 +101,4 @@ def test_telemetry_and_weather_are_empty(sample_csv: Path) -> None:
     assert frame.telemetry.empty
     assert frame.weather.empty
     assert frame.tariffs.empty
+    assert frame.station_state.empty

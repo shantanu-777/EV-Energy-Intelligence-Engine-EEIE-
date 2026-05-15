@@ -60,3 +60,9 @@ def test_list_datasets_is_sorted_by_slug() -> None:
 def test_target_canonical_routing(slug: str, must_target: str) -> None:
     spec = datasets.get_dataset(slug)
     assert must_target in spec.target_canonical
+
+
+def test_every_registered_slug_has_adapter() -> None:
+    from eeie.ingestion.adapters import ADAPTERS
+
+    assert set(ADAPTERS) == EXPECTED_SLUGS

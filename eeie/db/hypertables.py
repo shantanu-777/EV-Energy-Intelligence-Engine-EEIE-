@@ -16,6 +16,7 @@ HYPERTABLES: list[tuple[str, str, str]] = [
     ("telemetry", "ts", "7 days"),
     ("weather", "ts", "30 days"),
     ("charging_events", "start_ts", "30 days"),
+    ("station_state", "ts", "30 days"),
 ]
 
 

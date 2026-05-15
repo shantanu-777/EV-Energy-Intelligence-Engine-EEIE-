@@ -10,6 +10,7 @@ from eeie.db.engine import (
 from eeie.db.models import (
     Base,
     ChargingEvent,
+    StationState,
     Tariff,
     Telemetry,
     Vehicle,
@@ -20,6 +21,7 @@ __all__ = [
     "Base",
     "ChargingEvent",
     "SessionLocal",
+    "StationState",
     "Tariff",
     "Telemetry",
     "Vehicle",

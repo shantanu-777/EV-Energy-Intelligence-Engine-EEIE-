@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from eeie.db.models import (
     ChargingEvent,
+    StationState,
     Tariff,
     Telemetry,
     Vehicle,
@@ -98,8 +99,14 @@ def load_charging_events(session: Session, df: pd.DataFrame) -> int:
     return n
 
 
+def load_station_state(session: Session, df: pd.DataFrame) -> int:
+    n = _bulk_insert(session, StationState, _records(df), ["ts", "station_id"])
+    logger.info("Inserted {} station_state rows.", n)
+    return n
+
+
 def load_simulation_result(session: Session, result: SimulationResult) -> None:
-    """Persist all five tables of a simulation result."""
+    """Persist every table produced by a simulation run."""
     load_vehicles(session, result.vehicles)
     load_weather(session, result.weather)
     load_tariffs(session, result.tariffs)

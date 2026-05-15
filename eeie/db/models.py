@@ -1,10 +1,11 @@
 """SQLAlchemy 2.x ORM models for the EEIE schema.
 
-Telemetry, weather, tariffs, and charging events are stored at hourly
-resolution. In production deployments the `telemetry`, `weather`, and
-`charging_events` tables are TimescaleDB hypertables (see
-`eeie.db.hypertables.bootstrap_hypertables`); on plain Postgres they remain
-ordinary tables, which keeps tests and lightweight local runs portable.
+Telemetry, weather, tariffs, charging events, and public charging
+snapshots (`station_state`) use their own tables. In production deployments
+time-series tables (`telemetry`, `weather`, `charging_events`,
+`station_state`) are TimescaleDB hypertables (see
+`eeie.db.hypertables.bootstrap_hypertables`); on plain Postgres they stay
+ordinary tables so local runs and CI stay lightweight.
 """
 
 from __future__ import annotations
@@ -119,3 +120,22 @@ class ChargingEvent(Base):
     vehicle: Mapped[Vehicle] = relationship(back_populates="charging_events")
 
     __table_args__ = (Index("ix_charging_vehicle_start", "vehicle_id", "start_ts"),)
+
+
+class StationState(Base):
+    """Public charging point availability or catalog row (time + station)."""
+
+    __tablename__ = "station_state"
+
+    ts: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    station_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    region_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    lat: Mapped[float] = mapped_column(Float, nullable=False)
+    lon: Mapped[float] = mapped_column(Float, nullable=False)
+    n_connectors: Mapped[int] = mapped_column(Integer, nullable=False)
+    n_available: Mapped[int] = mapped_column(Integer, nullable=False)
+    is_dc_fast: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    operator: Mapped[str] = mapped_column(String(256), nullable=False)
+    tariff_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    __table_args__ = (Index("ix_station_state_region_ts", "region_id", "ts"),)

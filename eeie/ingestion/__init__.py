@@ -19,6 +19,7 @@ from eeie.ingestion.datasets import (
 from eeie.ingestion.loader import (
     load_charging_events,
     load_simulation_result,
+    load_station_state,
     load_telemetry,
     load_vehicles,
     load_weather,
@@ -33,6 +34,7 @@ from eeie.ingestion.raw import (
 )
 from eeie.ingestion.schemas import (
     ChargingEventRecord,
+    StationStateRecord,
     TariffRecord,
     TelemetryRecord,
     VehicleRecord,
@@ -46,6 +48,7 @@ __all__ = [
     "CuratedFrame",
     "DatasetSpec",
     "RawDatasetStatus",
+    "StationStateRecord",
     "TariffRecord",
     "TelemetryRecord",
     "VehicleRecord",
@@ -58,6 +61,7 @@ __all__ = [
     "list_datasets",
     "load_charging_events",
     "load_simulation_result",
+    "load_station_state",
     "load_telemetry",
     "load_vehicles",
     "load_weather",

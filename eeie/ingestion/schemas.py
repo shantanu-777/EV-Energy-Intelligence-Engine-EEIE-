@@ -74,3 +74,16 @@ class ChargingEventRecord(_Base):
     avg_power_kw: float = Field(ge=0)
     is_dc_fast: bool
     cost_eur: float = Field(ge=0)
+
+
+class StationStateRecord(_Base):
+    ts: datetime
+    station_id: str
+    region_id: str
+    lat: float
+    lon: float
+    n_connectors: int = Field(ge=0)
+    n_available: int = Field(ge=0)
+    is_dc_fast: bool
+    operator: str
+    tariff_id: str | None = None
