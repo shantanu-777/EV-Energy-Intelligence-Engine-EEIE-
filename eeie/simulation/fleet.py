@@ -19,6 +19,7 @@ from eeie.config.vehicles import (
     DriverProfile,
     VehicleArchetype,
 )
+from eeie.simulation.calibration import CalibrationProfile
 
 
 @dataclass(frozen=True)
@@ -40,13 +41,19 @@ class SampledVehicle:
     tariff_id: str
 
 
-def sample_fleet(*, n_vehicles: int, seed: int) -> list[SampledVehicle]:
+def sample_fleet(
+    *, n_vehicles: int, seed: int, calibration: CalibrationProfile | None = None
+) -> list[SampledVehicle]:
     """Return a heterogeneous fleet of `n_vehicles` simulated EVs."""
     rng = np.random.default_rng(seed)
+    cal = calibration or CalibrationProfile.defaults()
+    probs = np.array(cal.driver_profile_probs, dtype=float)
+    probs = probs / max(probs.sum(), 1e-9)
+
     fleet: list[SampledVehicle] = []
     for i in range(n_vehicles):
         archetype = VEHICLE_ARCHETYPES[rng.integers(0, len(VEHICLE_ARCHETYPES))]
-        driver = DRIVER_PROFILES[rng.choice(len(DRIVER_PROFILES), p=[0.35, 0.45, 0.20])]
+        driver = DRIVER_PROFILES[rng.choice(len(DRIVER_PROFILES), p=probs)]
 
         capacity = float(archetype.battery_capacity_kwh * rng.uniform(0.95, 1.02))
         efficiency = float(
@@ -54,9 +61,11 @@ def sample_fleet(*, n_vehicles: int, seed: int) -> list[SampledVehicle]:
             * driver.efficiency_multiplier
             * rng.uniform(0.95, 1.10)
         )
-        weekday_km = float(np.clip(rng.normal(45.0, 18.0), 8.0, 140.0))
-        weekend_km = float(np.clip(rng.normal(30.0, 25.0), 0.0, 220.0))
-        initial_soh = float(rng.uniform(0.92, 1.00))
+        weekday_km = float(
+            np.clip(rng.normal(cal.weekday_km_mean, 18.0), 8.0, 140.0)
+        )
+        weekend_km = float(np.clip(rng.normal(cal.weekend_km_mean, 25.0), 0.0, 220.0))
+        initial_soh = float(rng.uniform(cal.initial_soh_low, cal.initial_soh_high))
 
         fleet.append(
             SampledVehicle(

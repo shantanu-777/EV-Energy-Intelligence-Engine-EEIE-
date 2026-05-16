@@ -10,6 +10,7 @@ Parquet snapshots under `$EEIE_DATA_DIR/simulation/`.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
@@ -20,7 +21,10 @@ from eeie.config import get_settings
 from eeie.db import session_scope
 from eeie.db.engine import get_engine
 from eeie.db.hypertables import bootstrap_hypertables
+from eeie.ingestion.adapters import get_adapter
 from eeie.ingestion.loader import load_simulation_result
+from eeie.ingestion.raw import find_csv
+from eeie.simulation.calibration import fit_from_curated
 from eeie.simulation.engine import SimulationConfig, simulate_fleet
 
 app = typer.Typer(add_completion=False, help="Run the EEIE synthetic data simulator.")
@@ -40,6 +44,14 @@ def main(
     bootstrap_hypertables_flag: bool = typer.Option(
         True, "--bootstrap-hypertables/--no-bootstrap-hypertables"
     ),
+    calibrate_from: str | None = typer.Option(
+        None,
+        "--calibrate-from",
+        help=(
+            "Dataset slug whose curated CSV informs driver mix, km, plug-in SOC, "
+            "and optional SOH band."
+        ),
+    ),
 ) -> None:
     """Run the simulator end-to-end."""
     settings = get_settings()
@@ -51,6 +63,19 @@ def main(
         seed=seed if seed is not None else settings.sim_seed,
         start_ts=pd.Timestamp(start, tz="UTC"),
     )
+
+    if calibrate_from:
+        csv_path = find_csv(calibrate_from)
+        calibrated = fit_from_curated(get_adapter(calibrate_from)(csv_path))
+        if calibrated is None:
+            logger.warning(
+                "No charging_events or telemetry.soh rows in {}; simulation uses defaults.",
+                calibrate_from,
+            )
+        else:
+            cfg = replace(cfg, calibration=calibrated)
+            logger.info("Applied calibration priors from {}.", calibrate_from)
+
     logger.info("Simulation config: {}", cfg)
 
     result = simulate_fleet(cfg)

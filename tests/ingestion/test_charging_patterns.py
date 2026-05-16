@@ -48,6 +48,7 @@ def test_charging_events_have_canonical_columns_and_dtypes(sample_csv: Path) -> 
     assert events["start_ts"].dt.tz is not None
     assert events["end_ts"].dt.tz is not None
     assert events["is_dc_fast"].dtype == bool
+    assert (events["data_source"] == "real").all()
 
     assert (events["start_soc"] >= 0).all() and (events["start_soc"] <= 1).all()
     assert (events["end_soc"] >= 0).all() and (events["end_soc"] <= 1).all()
@@ -101,3 +102,4 @@ def test_telemetry_and_weather_are_empty(sample_csv: Path) -> None:
     assert frame.telemetry.empty
     assert frame.weather.empty
     assert frame.tariffs.empty
+    assert frame.station_state.empty

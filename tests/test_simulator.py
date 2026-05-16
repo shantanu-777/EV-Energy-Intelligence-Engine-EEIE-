@@ -11,6 +11,7 @@ def test_simulation_shape(small_simulation):
     assert not res.telemetry.empty
     assert (res.telemetry["soc"] >= 0).all() and (res.telemetry["soc"] <= 1).all()
     assert (res.telemetry["soh"] > 0.5).all() and (res.telemetry["soh"] <= 1.0).all()
+    assert (res.telemetry["data_source"] == "synthetic").all()
 
 
 def test_telemetry_columns(small_simulation):
@@ -29,6 +30,7 @@ def test_telemetry_columns(small_simulation):
         "is_charging",
         "is_driving",
         "soh",
+        "data_source",
     }
     assert expected.issubset(set(small_simulation.telemetry.columns))
 
@@ -41,6 +43,7 @@ def test_tariff_rates_positive(small_simulation):
 def test_charging_events_consistent(small_simulation):
     events = small_simulation.charging_events
     if not events.empty:
+        assert (events["data_source"] == "synthetic").all()
         assert (events["end_soc"] >= events["start_soc"] - 1e-6).all()
         assert (events["energy_kwh"] >= 0).all()
         assert (events["cost_eur"] >= 0).all()

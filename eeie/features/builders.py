@@ -50,6 +50,7 @@ def load_features_from_db(
         Telemetry.is_charging,
         Telemetry.is_driving,
         Telemetry.soh,
+        Telemetry.data_source,
         Vehicle.battery_capacity_kwh,
         Vehicle.nominal_efficiency_kwh_per_km,
         Vehicle.driver_profile_id,

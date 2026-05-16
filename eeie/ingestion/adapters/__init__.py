@@ -5,7 +5,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from eeie.ingestion.adapters import battery_charging, charging_patterns
+from eeie.ingestion.adapters import (
+    battery_charging,
+    charging_patterns,
+    germany_charging,
+    station_availability,
+)
 from eeie.ingestion.adapters._common import (
     CuratedFrame,
     curated_dir,
@@ -18,6 +23,8 @@ AdapterFn = Callable[[Path], CuratedFrame]
 ADAPTERS: dict[str, AdapterFn] = {
     charging_patterns.SLUG: charging_patterns.to_canonical,
     battery_charging.SLUG: battery_charging.to_canonical,
+    station_availability.SLUG: station_availability.to_canonical,
+    germany_charging.SLUG: germany_charging.to_canonical,
 }
 
 
