@@ -9,6 +9,12 @@ CLI:
     python -m eeie.simulation.run --vehicles 100 --months 12
 """
 
+from eeie.simulation.calibration import CalibrationProfile, fit_from_curated
 from eeie.simulation.engine import SimulationConfig, simulate_fleet
 
-__all__ = ["SimulationConfig", "simulate_fleet"]
+__all__ = [
+    "CalibrationProfile",
+    "SimulationConfig",
+    "fit_from_curated",
+    "simulate_fleet",
+]
