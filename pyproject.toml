@@ -59,7 +59,6 @@ dev = [
 ]
 
 [project.scripts]
-eeie-simulate = "eeie.simulation.run:app"
 eeie-train = "scripts.train_all:app"
 eeie-evaluate = "scripts.evaluate:app"
 eeie-ingest = "eeie.ingestion.cli:app"

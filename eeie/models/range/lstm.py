@@ -71,7 +71,7 @@ class RangeLSTM:
         X: pd.DataFrame,
         y: pd.Series,
         *,
-        epochs: int = 4,
+        epochs: int = 30,
         batch_size: int = 128,
         lr: float = 1e-3,
         device: str | None = None,
@@ -79,16 +79,38 @@ class RangeLSTM:
         self.feature_names = list(X.columns)
         device_ = device or ("cuda" if torch.cuda.is_available() else "cpu")
 
-        X_np = X.to_numpy(dtype=np.float32)
+        merged = pd.concat([X.reset_index(drop=True), y.rename("_y_target_")], axis=1)
+        merged = merged.replace([np.inf, -np.inf], np.nan)
+        num_cols = list(X.columns)
+        merged[num_cols] = merged[num_cols].fillna(merged[num_cols].median(numeric_only=True))
+        merged[num_cols] = merged[num_cols].fillna(0.0)
+        merged["_y_target_"] = merged["_y_target_"].fillna(merged["_y_target_"].median())
+        merged = merged.dropna(subset=["_y_target_"])
+        merged = merged[np.isfinite(merged["_y_target_"]).to_numpy()]
+
+        X_df = merged[num_cols]
+        y_series = merged["_y_target_"]
+
+        X_np = np.ascontiguousarray(X_df.to_numpy(dtype=np.float32, copy=True))
         self.mean_ = X_np.mean(axis=0)
         self.std_ = X_np.std(axis=0) + 1e-6
         X_scaled = (X_np - self.mean_) / self.std_
         X_scaled_df = pd.DataFrame(X_scaled, columns=self.feature_names)
 
-        xs, ys = _build_windows(X_scaled_df, y, self.seq_len)
+        xs, ys = _build_windows(X_scaled_df, y_series, self.seq_len)
+        if len(xs) < 2:
+            raise ValueError(
+                f"LSTM training needs sliding windows beyond seq_len={self.seq_len}; got {len(xs)}."
+            )
         split = int(0.8 * len(xs))
+        split = max(1, min(split, len(xs) - 1))
         x_train, y_train = xs[:split], ys[:split]
         x_val, y_val = xs[split:], ys[split:]
+
+        x_train = np.ascontiguousarray(x_train.astype(np.float32, copy=True))
+        y_train = np.ascontiguousarray(y_train.astype(np.float32, copy=True))
+        x_val = np.ascontiguousarray(x_val.astype(np.float32, copy=True))
+        y_val = np.ascontiguousarray(y_val.astype(np.float32, copy=True))
 
         train_loader = DataLoader(
             TensorDataset(torch.from_numpy(x_train), torch.from_numpy(y_train)),
@@ -120,12 +142,14 @@ class RangeLSTM:
 
             self.model.eval()
             with torch.no_grad():
-                val_losses = []
+                val_losses: list[float] = []
                 for xb, yb in val_loader:
                     xb = xb.to(device_)
                     yb = yb.to(device_)
                     pred = self.model(xb)
-                    val_losses.append(loss_fn(pred, yb).item())
+                    batch_loss = loss_fn(pred, yb).item()
+                    if np.isfinite(batch_loss):
+                        val_losses.append(batch_loss)
                 val_loss = float(np.mean(val_losses)) if val_losses else float("nan")
             logger.info("RangeLSTM epoch {}: val_loss={:.5f}", epoch + 1, val_loss)
 
@@ -149,6 +173,7 @@ class RangeLSTM:
             X_scaled, window_shape=(self.seq_len, X_scaled.shape[1])
         )
         windows = windows.reshape(-1, self.seq_len, X_scaled.shape[1])
+        windows = np.ascontiguousarray(windows.astype(np.float32, copy=True))
         with torch.no_grad():
             self.model.eval()
             preds = self.model(torch.from_numpy(windows).to(device_)).cpu().numpy()
