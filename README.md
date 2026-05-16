@@ -123,7 +123,8 @@ docker compose exec api python -m eeie.simulation.run --vehicles 100 --months 12
 
 The simulator generates 100 vehicles x 12 months of hourly telemetry,
 tariff schedules, weather, and charging events, writing both to TimescaleDB
-hypertables and to Parquet snapshots in `./data/`.
+hypertables and to Parquet snapshots in `./data/`. Use
+`python -m eeie.simulation.run ... --calibrate-from charging_patterns` (after dropping the slug’s CSV under `data/raw/`) to align synthetic driver mix, daily km proxy, plug-in SOC, and optional SOH band with that curated adapter output.
 
 ### 3. Train the models
 
