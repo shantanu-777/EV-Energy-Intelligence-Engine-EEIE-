@@ -7,8 +7,14 @@ from pathlib import Path
 import typer
 from loguru import logger
 
+from eeie.config import get_settings
+from eeie.db import session_scope
+from eeie.db.engine import get_engine
+from eeie.db.hypertables import bootstrap_hypertables
 from eeie.ingestion.adapters import available_slugs, get_adapter, write_curated
+from eeie.ingestion.loader import load_curated_bundle
 from eeie.ingestion.raw import RawDatasetStatus, find_csv, verify, verify_all
+from eeie.ingestion.unifier import synthesize_training_grid, unify_pipeline
 
 app = typer.Typer(add_completion=False, help="EEIE real-dataset ingestion utilities.")
 
@@ -27,6 +33,8 @@ def _print_statuses(statuses: list[RawDatasetStatus]) -> int:
         if not status.ok:
             failures += 1
     return failures
+
+
 @app.command("verify")
 def cmd_verify(
     slug: str | None = typer.Option(
@@ -97,6 +105,61 @@ def cmd_run(
     typer.echo(f"Ran {len(slugs)} adapter(s); {failures} failed.")
     if failures:
         raise typer.Exit(code=1)
+
+
+@app.command("load-db")
+def cmd_load_db(
+    slug: str | None = typer.Option(
+        None,
+        "--slug",
+        "-s",
+        help="Restrict to one slug (omit for every adapter whose CSV resolves).",
+    ),
+    all_: bool = typer.Option(False, "--all", help="Explicitly run every registered slug."),
+    bootstrap_hypertables_flag: bool = typer.Option(
+        True,
+        "--bootstrap-hypertables/--no-bootstrap-hypertables",
+        help="Bootstrap Timescale hypertables before insert (Postgres only).",
+    ),
+) -> None:
+    """Unify curated adapters and bulk-load into Postgres for training."""
+    settings = get_settings()
+    settings.ensure_dirs()
+
+    try:
+        slugs = _resolve_run_slugs(slug, all_)
+    except typer.BadParameter:
+        raise
+
+    frames = []
+    for s in slugs:
+        try:
+            raw_path = find_csv(s)
+            frames.append(get_adapter(s)(raw_path))
+            typer.echo(f"[adapt] {s}: {frames[-1].summary()}")
+        except Exception as exc:
+            logger.exception("Skipping {} — {}", s, exc)
+            typer.echo(f"[skip] {s}: {exc}")
+
+    if not frames:
+        typer.echo("No adapters produced frames; aborting.")
+        raise typer.Exit(code=1)
+
+    merged = unify_pipeline(frames)
+    merged = synthesize_training_grid(merged, seed=settings.sim_seed)
+    if merged.telemetry.empty:
+        typer.echo(
+            "Unified frame has no telemetry. Add battery_charging and/or charging_patterns "
+            "(session-derived hourly rows)."
+        )
+        raise typer.Exit(code=1)
+
+    engine = get_engine()
+    if bootstrap_hypertables_flag:
+        bootstrap_hypertables(engine)
+    with session_scope() as session:
+        counts = load_curated_bundle(session, merged)
+    typer.echo(f"Loaded: {counts}")
 
 
 if __name__ == "__main__":

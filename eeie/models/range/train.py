@@ -16,7 +16,7 @@ from eeie.models.range.xgb import RangeXGB
 def _load_or_panic(session: Session) -> pd.DataFrame:
     df = load_features_from_db(session)
     if df.empty:
-        raise RuntimeError("No telemetry found. Run `python -m eeie.simulation.run` first.")
+        raise RuntimeError("No telemetry found. Run `eeie-ingest load-db` after raw CSV drops.")
     return df
 
 
@@ -31,7 +31,7 @@ def train_range_xgb(session: Session) -> dict[str, float]:
     return metrics
 
 
-def train_range_lstm(session: Session, *, epochs: int = 4) -> dict[str, float]:
+def train_range_lstm(session: Session, *, epochs: int = 30) -> dict[str, float]:
     df = _load_or_panic(session)
     X, y = build_range_features(df)
     model = RangeLSTM()

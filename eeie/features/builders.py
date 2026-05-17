@@ -122,6 +122,23 @@ def _add_time_features(df: pd.DataFrame) -> pd.DataFrame:
 def build_hourly_features(df: pd.DataFrame) -> pd.DataFrame:
     """Compute the canonical hourly feature frame used by Range engine."""
     df = df.sort_values(["vehicle_id", "ts"]).reset_index(drop=True)
+    df = df.copy()
+    # Outer merges can leave gaps; propagate NaNs into torch targets if unfilled.
+    if "humidity" in df.columns:
+        df["humidity"] = df["humidity"].fillna(0.65).clip(lower=0.0, upper=1.0)
+    if "wind_speed_kmh" in df.columns:
+        df["wind_speed_kmh"] = df["wind_speed_kmh"].fillna(12.0).clip(lower=0.0)
+    if "precipitation_mm" in df.columns:
+        df["precipitation_mm"] = df["precipitation_mm"].fillna(0.0).clip(lower=0.0)
+    if "rate_eur_per_kwh" in df.columns:
+        rate = pd.to_numeric(df["rate_eur_per_kwh"], errors="coerce")
+        med = float(rate.median())
+        if not np.isfinite(med) or med <= 0:
+            med = 0.22
+        df["rate_eur_per_kwh"] = rate.fillna(med).clip(lower=0.0)
+    if "tier" in df.columns:
+        df["tier"] = df["tier"].fillna("shoulder").astype(str)
+
     df = _add_time_features(df)
 
     grouped = df.groupby("vehicle_id", group_keys=False)

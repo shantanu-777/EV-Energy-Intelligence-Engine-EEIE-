@@ -20,9 +20,12 @@ COPY eeie ./eeie
 COPY scripts ./scripts
 COPY alembic.ini ./alembic.ini
 
-RUN pip install --upgrade pip && pip install .
+RUN pip install --upgrade pip && pip install . && \
+    command -v eeie-ingest >/dev/null && \
+    command -v eeie-train >/dev/null && \
+    command -v eeie-evaluate >/dev/null
 
 EXPOSE 8000
 
-# Default runs the FastAPI app; override for training or simulation.
+# Serve FastAPI by default.
 CMD ["uvicorn", "eeie.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

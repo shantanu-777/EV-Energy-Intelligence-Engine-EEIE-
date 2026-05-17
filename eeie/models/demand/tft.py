@@ -13,9 +13,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import lightning.pytorch as pl
 import numpy as np
 import pandas as pd
-import pytorch_lightning as pl
 import torch
 from loguru import logger
 from pytorch_forecasting import (
@@ -108,7 +108,11 @@ class DemandTFT:
             enable_checkpointing=False,
             gradient_clip_val=0.1,
         )
-        trainer.fit(self.model, train_loader, val_loader)
+        trainer.fit(
+            model=self.model,
+            train_dataloaders=train_loader,
+            val_dataloaders=val_loader,
+        )
         self.dataset_params = training_ds.get_parameters()
 
         try:
