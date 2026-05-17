@@ -1,11 +1,12 @@
-EEIE Phase 1 Skeleton
+EEIE - EV Energy intelligence Engine
 
 A runnable end-to-end platform: simulator produces realistic synthetic data into TimescaleDB, all engines train on it, FastAPI serves predictions, Streamlit visualizes them. Depth comes later; breadth and structural integrity come now.
 
-<img width="2158" height="1349" alt="Screenshot 2026-05-13 at 21 20 25" src="https://github.com/user-attachments/assets/9a4f7fdf-b0fa-40f0-8c89-4ea805f43430" />
+<img width="2158" height="1349" alt="Screenshot 2026-05-13 at 21 20 25" src="https://github.com/user-attachments/assets/3cb729be-bdd2-4d3f-a93e-0e483a7d0a10" />
+<img width="1500" height="1271" alt="Screenshot 2026-05-13 at 21 22 09" src="https://github.com/user-attachments/assets/3742d063-da46-4d40-835d-6632fc80d54c" />
+<img width="1485" height="1321" alt="Screenshot 2026-05-13 at 21 23 22" src="https://github.com/user-attachments/assets/5b57c404-c110-428d-bcdb-717cba107af9" />
 
-<img width="1500" height="1271" alt="Screenshot 2026-05-13 at 21 22 09" src="https://github.com/user-attachments/assets/48163f9a-212d-4a44-92bd-ef252523796f" />
-<img width="1485" height="1321" alt="Screenshot 2026-05-13 at 21 23 22" src="https://github.com/user-attachments/assets/22e9f122-7a97-4d56-ac91-53a64142a647" />
+
 
 
 layout
@@ -75,7 +76,8 @@ EV-Energy-Intelligence-Engine-EEIE/
 
 Build order (module dependencies)
 
-<img width="1436" height="1008" alt="Screenshot 2026-05-13 at 15 02 39" src="https://github.com/user-attachments/assets/24162fde-842f-4dbd-9509-1b10bef13847" />
+<img width="1577" height="1168" alt="Screenshot 2026-05-13 at 15 01 25" src="https://github.com/user-attachments/assets/d992ac8d-5198-4e58-bbce-9675420153fe" />
+
 
 Key technical decisions
 
@@ -123,7 +125,8 @@ docker compose exec api python -m eeie.simulation.run --vehicles 100 --months 12
 
 The simulator generates 100 vehicles x 12 months of hourly telemetry,
 tariff schedules, weather, and charging events, writing both to TimescaleDB
-hypertables and to Parquet snapshots in `./data/`.
+hypertables and to Parquet snapshots in `./data/`. Use
+`python -m eeie.simulation.run ... --calibrate-from charging_patterns` (after dropping the slug’s CSV under `data/raw/`) to align synthetic driver mix, daily km proxy, plug-in SOC, and optional SOH band with that curated adapter output.
 
 ### 3. Train the models
 
@@ -140,7 +143,7 @@ configs + K-Means/XGBoost). Checkpoints are persisted to `./checkpoints/`.
 - Streamlit UI: <http://localhost:8501>
 - Run the ablation: `docker compose exec api python -m scripts.evaluate`
 
-## Real-world dataset ingestion
+## dataset ingestion
 
 The ingestion CLI tracks several public datasets that ultimately feed the
 same schema as the built-in simulator. Downloads are manual: unzip into
