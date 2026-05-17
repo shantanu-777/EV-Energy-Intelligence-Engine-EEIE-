@@ -20,6 +20,7 @@ import pandas as pd
 from loguru import logger
 
 from eeie.config.tariffs import DEFAULT_TARIFF, TariffSchedule
+from eeie.simulation.calibration import CalibrationProfile
 from eeie.simulation.driving import generate_day
 from eeie.simulation.fleet import SampledVehicle, sample_fleet
 from eeie.simulation.tariffs import materialize_tariff
@@ -43,6 +44,7 @@ class SimulationConfig:
     start_ts: pd.Timestamp = field(default_factory=lambda: pd.Timestamp("2025-01-01", tz="UTC"))
     tariff: TariffSchedule = field(default_factory=lambda: DEFAULT_TARIFF)
     region_id: str = "central_eu"
+    calibration: CalibrationProfile | None = None
 
 
 @dataclass
@@ -71,6 +73,7 @@ def _simulate_vehicle(
     tariff_tiers: np.ndarray,
     start_ts: pd.Timestamp,
     rng: np.random.Generator,
+    calibration: CalibrationProfile | None = None,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Simulate a single vehicle. Returns (telemetry, charging_events)."""
     periods = len(weather)
@@ -109,7 +112,10 @@ def _simulate_vehicle(
     batt_temp_state = float(ambient[0] + 3.0)
     capacity = vehicle.battery_capacity_kwh
 
-    plug_in_threshold = float(np.clip(rng.normal(0.30, 0.06), 0.10, 0.45))
+    cal_prof = calibration or CalibrationProfile.defaults()
+    plug_in_threshold = float(
+        np.clip(rng.normal(cal_prof.median_plug_in_soc, 0.06), 0.10, 0.45)
+    )
     target_soc = vehicle.driver.target_soc_preference
     fast_charge_pref = vehicle.driver.fast_charge_preference
 
@@ -281,7 +287,11 @@ def _simulate_vehicle(
 
 def simulate_fleet(config: SimulationConfig) -> SimulationResult:
     """Run a full fleet simulation per `config`."""
-    fleet = sample_fleet(n_vehicles=config.n_vehicles, seed=config.seed)
+    fleet = sample_fleet(
+        n_vehicles=config.n_vehicles,
+        seed=config.seed,
+        calibration=config.calibration,
+    )
     logger.info(
         "Sampled fleet of {} vehicles. Horizon: {} months from {}.",
         config.n_vehicles,
@@ -312,6 +322,7 @@ def simulate_fleet(config: SimulationConfig) -> SimulationResult:
             tariff_tiers=tariff_tiers,
             start_ts=config.start_ts,
             rng=veh_rng,
+            calibration=config.calibration,
         )
         telemetry_frames.append(tel)
         if not evt.empty:
